@@ -28,18 +28,22 @@ OctoFit Tracker is a three-tier application for a school fitness program. The st
 
 ## Implementation decisions
 
-- Presentation tier: keep React pages and components focused on rendering and interaction. Route API requests through the shared client using relative `/api` paths, and expose loading, empty, and error states accessibly.
-- Logic tier: keep request validation and capability behavior in the Express API. Validate request data and identifiers before database operations, return deliberate 4xx responses for invalid or missing resources, and avoid leaking Mongoose errors as 500 responses.
-- Data tier: keep persistence in Mongoose models and seed logic. Model required fields and relationships explicitly, and keep seeding repeatable so it can safely initialize representative data for all four capabilities.
-- Activity tracking: accept `userId`, `teamId`, `type`, and `minutes`; validate both IDs and confirm the referenced records exist; then persist the user/team references, submitted activity details, computed points, and occurrence time.
-- Team management: persist the submitted name and mascot with the member references. Reject a missing name with `400`, and return created/listed teams without dropping the submitted fields.
-- Leaderboard: calculate each team's total from its activities' stored points, sort highest total first, and assign sequential 1-based ranks.
-- Workout suggestions: find the user by email and use their goal and recent activity to choose relevant suggestions with an explanatory reason. Return a deliberate 4xx when no user matches; do not hardcode a response for a particular email.
+Record your plan here before editing code.
+
+- Presentation tier decision:
+- Logic tier decision:
+- Data tier decision:
+- Activity tracking approach:
+- Team management approach:
+- Leaderboard approach:
+- Workout suggestions approach:
 
 ## Test plan
 
-- `npm run test:data --prefix octofit-tracker/backend` — checks model validation, relationships, and repeatable seeding. Last run: **failed, 4 of 5 tests**; required-field validation was missing for users, teams, activities, and workouts. The seed test passed.
-- `npm run test:api --prefix octofit-tracker/backend` — checks API behavior against the contracts. Last run: **failed, 4 of 4 tests**; invalid activity/team input returned `501` instead of `400`, the leaderboard returned no entries, and a workout suggestion lacked its expected reason.
-- `npm test --prefix octofit-tracker/frontend` — checks rendered API data, user-specific suggestion requests, and accessible loading/empty/error states. Last run: **failed, 15 of 15 tests** across those behaviors.
-- `npm run build --prefix octofit-tracker/backend` — checks backend TypeScript compilation. Last run: **passed**.
-- `npm run build --prefix octofit-tracker/frontend` — checks frontend TypeScript compilation and the Vite production build. Last run: **passed**.
+Record the commands you run and what each failure means.
+
+- Data-tier command: `npm run test:data --prefix octofit-tracker/backend`
+- API command: `npm run test:api --prefix octofit-tracker/backend`
+- Frontend command: `npm test --prefix octofit-tracker/frontend`
+- Backend build command: `npm run build --prefix octofit-tracker/backend`
+- Frontend build command: `npm run build --prefix octofit-tracker/frontend`
