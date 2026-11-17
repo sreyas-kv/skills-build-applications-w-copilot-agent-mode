@@ -28,22 +28,23 @@ OctoFit Tracker is a three-tier application for a school fitness program. The st
 
 ## Implementation decisions
 
-Record your plan here before editing code.
-
-- Presentation tier decision:
-- Logic tier decision:
-- Data tier decision:
-- Activity tracking approach:
-- Team management approach:
-- Leaderboard approach:
-- Workout suggestions approach:
+- Presentation tier decision: keep React pages and components responsible for interaction and rendering; route relative `/api` reads and writes through the shared client and Vite proxy, adding a JSON POST helper for creates. Show accessible loading, success, empty, and error states. The frontend does not access MongoDB directly.
+- Logic tier decision: keep Express route handlers thin and delegate validation and business behavior to TypeScript services. Validate request fields and object IDs, verify referenced records before writes, and return deliberate 4xx responses rather than exposing cast or validation failures as 500s.
+- Data tier decision: keep persistence in Mongoose schemas and models. Require the fields in the API contract, model user/team relationships with ObjectId references, default team members to an empty array, and preserve the seed script's stable, non-destructive upserts and membership reconciliation.
+- Activity tracking approach: accept `userId`, `teamId`, `type`, and positive `minutes`; validate both IDs and confirm the user and team exist. Award one point per minute, consistent with the seeded examples, and set `occurredAt` when the service creates the activity.
+- Team management approach: require a non-empty `name` and `mascot`, validate member IDs against existing users, and persist the submitted values and member references. A team without a name returns `400`.
+- Leaderboard approach: sum stored activity points for each team, include teams with no activity at zero points, sort totals descending, and assign sequential 1-based ranks.
+- Workout suggestions approach: find the user by email, prefer a workout matching their fitness goal, and use recent activity focus when no goal-matched workout is available. Include a reason with each suggestion and return a deliberate 4xx for an unknown email.
 
 ## Test plan
 
-Record the commands you run and what each failure means.
+The starter's contract tests are intentionally red until the learner implements the capabilities. Run them as implementation progresses; do not change protected tests, grader contracts, or package scripts to make them pass.
 
-- Data-tier command: `npm run test:data --prefix octofit-tracker/backend`
-- API command: `npm run test:api --prefix octofit-tracker/backend`
-- Frontend command: `npm test --prefix octofit-tracker/frontend`
-- Backend build command: `npm run build --prefix octofit-tracker/backend`
-- Frontend build command: `npm run build --prefix octofit-tracker/frontend`
+- `npm run test:data --prefix octofit-tracker/backend` — checks required model fields, references, defaults, and repeatable non-destructive seeding. Failures point to incomplete schema validation or seed behavior.
+- `npm run test:api --prefix octofit-tracker/backend` — checks activity and team validation/persistence, computed activity fields, leaderboard aggregation/ranks, and user-specific suggestions. Failures point to an API contract or service-layer behavior gap; malformed or missing references must produce a deliberate 4xx, not a cast-error 500.
+- `npm test --prefix octofit-tracker/frontend` — checks API-backed rendering, workout suggestion requests, and accessible loading, empty, and error states. Failures point to an API integration, display, or accessibility gap.
+- `npm run build --prefix octofit-tracker/backend` — checks backend TypeScript; failures indicate compile or type errors.
+- `npm run build --prefix octofit-tracker/frontend` — checks frontend TypeScript and the Vite production bundle; failures indicate compile, type, or bundling errors.
+- `node .github/scripts/grade-step.mjs step1-architecture` — verifies this document has all seven completed decisions and the required test commands.
+- `node .github/scripts/validate-exercise.mjs` — maintainer check for the exercise scaffold, workflow/configuration rules, protected contracts, private port setup, and documentation placeholders.
+- `node --test tests/exercise-validation.test.mjs` — verifies the maintainer validator's own checks. Run these maintainer checks when changing exercise content or preparing publication, as described in `docs/exercise-validation.md`.
