@@ -28,18 +28,18 @@ OctoFit Tracker is a three-tier application for a school fitness program. The st
 
 ## Implementation decisions
 
-- Presentation tier: `App.tsx` provides React Router navigation. Capability pages use the shared API client through `useApiData` and render fetched data with accessible loading, empty, and error states. The workout page requests suggestions for the seeded Mona account.
-- Logic tier: the Express API router delegates to `octofitService`; route handlers pass service errors to the app-level JSON error middleware. Validation and capability behavior remain in the service layer, with deliberate 4xx responses for invalid inputs and missing records.
-- Data tier: Mongoose schemas require user identity/goals, team name/mascot, activity references/details/points/time, and workout details. Team members default to an empty array. The seed script uses stable upserts and retains unrelated records.
-- Activity tracking: creation validates ObjectId syntax and referenced user/team existence, requires a non-empty type and positive minutes, awards one point per minute, and records the creation time.
-- Team management: creation requires a name and mascot, validates member IDs and existence, and stores the member references. Listing returns teams with their member IDs.
-- Leaderboard: aggregate stored activity points by team, include teams with no activity at zero points, sort totals descending, and assign sequential 1-based ranks.
-- Workout suggestions: find the user by email; prefer a workout matching their fitness goal, or otherwise one matching their most recent activity focus. Return a reason for each suggestion and `404` for an unknown user.
+- Presentation tier: `App.tsx` provides React Router navigation, but the capability components currently render generic cards. Use the existing shared API client for relative `/api` requests; keep capability UI in its page components and provide accessible loading, empty, and error states.
+- Logic tier: the Express API router delegates to `octofitService`, and the app-level error middleware returns JSON errors with their status codes. Keep route handlers thin and put validation and capability behavior in the service layer. Activity/team creation, leaderboard calculation, and user-specific suggestions are currently incomplete service stubs.
+- Data tier: Mongoose models represent users, teams, activities, and workouts, including ObjectId references, but their fields currently lack the required validators. Add schema validation while preserving the seed script's stable upserts and its behavior of retaining unrelated data.
+- Activity tracking: implement creation in the service layer. Validate the submitted user/team IDs and referenced records before writing; persist the references, activity type, minutes, computed points, and occurrence time. The current service returns `501` without creating a record.
+- Team management: retain member references and the submitted team name and mascot, and reject a missing name with `400`. Team listing is implemented; team creation currently returns `501`.
+- Leaderboard: aggregate stored activity points by team, sort totals descending, and return a 1-based rank for each result. The current service returns an empty list.
+- Workout suggestions: look up the requested user by email and use their goal and recent activity to select a matching workout with an explanatory reason; return a 4xx for an unknown user. The current service instead returns the first workout without matching a user or adding a reason.
 
 ## Test plan
 
-- `npm run test:data --prefix octofit-tracker/backend` — **passed: 5 tests**. Covers required model fields, team member defaults/references, and repeatable non-destructive seeding.
-- `npm run test:api --prefix octofit-tracker/backend` — **passed: 4 tests**. Covers activity validation/creation/listing, team creation/listing, leaderboard totals/ranks, and user-specific workout suggestions including unknown users.
-- `npm test --prefix octofit-tracker/frontend` — **passed: 15 tests**. Covers API-backed rendering, the workout suggestion request, and accessible loading, empty, and error states for all capability pages.
+- `npm run test:data --prefix octofit-tracker/backend` — **failed: 4 failed, 1 passed**. The user, team, activity, and workout schemas do not yet enforce the required fields; the idempotent, non-destructive seed test passed.
+- `npm run test:api --prefix octofit-tracker/backend` — **failed: 4 failed**. Activity and team creation return `501`, the leaderboard is empty, and workout suggestions do not match the requested user or include the expected reason.
+- `npm test --prefix octofit-tracker/frontend` — **failed: 15 failed**. Capability pages do not yet fetch and render API data or implement the tested loading, empty, and accessible error states.
 - `npm run build --prefix octofit-tracker/backend` — **passed**; TypeScript compilation succeeds.
 - `npm run build --prefix octofit-tracker/frontend` — **passed**; TypeScript compilation and the Vite production build succeed.
