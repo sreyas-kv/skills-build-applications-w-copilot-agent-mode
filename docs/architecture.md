@@ -38,6 +38,22 @@ OctoFit Tracker is a three-tier application for a school fitness program. The st
 
 ## Test plan
 
+### Current baseline
+
+The starter contracts are intentionally red:
+
+- Data contract: 4 failures and 1 passing seed test. User, team, activity, and workout schema validation is incomplete.
+- API contract: 4 failures. Activity and team routes remain at `501`, leaderboard data is empty, and workout suggestions lack the required reason/behavior.
+- Frontend contract: 15 failures. API-backed data rendering and the loading, empty, and error states are incomplete across activities, teams, leaderboard, and workouts.
+
+### Smallest safe implementation order
+
+1. Complete Mongoose schemas and the repeatable seed script in the data tier; stop and run `npm run test:data --prefix octofit-tracker/backend` plus `npm run build --prefix octofit-tracker/backend`.
+2. Implement thin Express routes and service validation in the logic tier, starting with activities and teams, then leaderboard and workout suggestions; stop after each capability and run `npm run test:api --prefix octofit-tracker/backend`.
+3. Re-run the backend build only after the API contract is green.
+4. Implement the shared API client and React views in the presentation tier; add loading, empty, error, and success behavior incrementally, and run `npm test --prefix octofit-tracker/frontend` after each capability.
+5. Finish with both production builds and the maintainer grading/validation checks; do not modify protected contracts or package scripts.
+
 The starter's contract tests are intentionally red until the learner implements the capabilities. Run them as implementation progresses; do not change protected tests, grader contracts, or package scripts to make them pass.
 
 - `npm run test:data --prefix octofit-tracker/backend` — checks required model fields, references, defaults, and repeatable non-destructive seeding. Failures point to incomplete schema validation or seed behavior.
