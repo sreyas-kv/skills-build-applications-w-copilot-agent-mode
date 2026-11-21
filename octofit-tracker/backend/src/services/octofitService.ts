@@ -60,15 +60,89 @@ export async function listTeams() {
 }
 
 export async function createTeam(_input: unknown) {
-  throw Object.assign(new Error('Team validation is not implemented yet'), { status: 501 });
+  if (!_input || typeof _input !== 'object') {
+    throw clientError('Team data is required');
+  }
+
+  const { name, mascot, members = [] } = _input as {
+    name?: unknown;
+    mascot?: unknown;
+    members?: unknown;
+  };
+  if (typeof name !== 'string' || name.trim().length === 0) {
+    throw clientError('A team name is required');
+  }
+  if (typeof mascot !== 'string' || mascot.trim().length === 0) {
+    throw clientError('A team mascot is required');
+  }
+  if (!Array.isArray(members)) {
+    throw clientError('Members must be an array');
+  }
+
+  const memberIds: string[] = [];
+  for (const memberId of members) {
+    if (typeof memberId !== 'string' || !isValidObjectId(memberId)) {
+      throw clientError('A valid member ID is required');
+    }
+    memberIds.push(memberId);
+  }
+  const existingMembers = await User.find({ _id: { $in: memberIds } }).select('_id').lean();
+  if (existingMembers.length !== memberIds.length) {
+    throw clientError('One or more team members were not found', 404);
+  }
+
+  return Team.create({
+    name: name.trim(),
+    mascot: mascot.trim(),
+    members: memberIds,
+  });
 }
 
 export async function getLeaderboard() {
-  return [];
+  const teams = await Team.find().lean();
+  const totals = await Activity.aggregate<{ _id: unknown; totalPoints: number }>([
+    { $group: { _id: '$team', totalPoints: { $sum: '$points' } } },
+  ]);
+  const pointsByTeam = new Map(
+    totals.map((entry) => [String(entry._id), entry.totalPoints]),
+  );
+
+  return teams
+    .map((team) => ({
+      teamName: team.name,
+      totalPoints: pointsByTeam.get(team._id.toString()) ?? 0,
+    }))
+    .sort((left, right) => right.totalPoints - left.totalPoints || left.teamName.localeCompare(right.teamName))
+    .map((entry, index) => ({ ...entry, rank: index + 1 }));
 }
 
 export async function suggestWorkouts(_userEmail: string) {
-  return Workout.find().limit(1).lean();
+  const userEmail = _userEmail.trim().toLowerCase();
+  const user = await User.findOne({ email: userEmail }).lean();
+  if (!user) {
+    throw clientError('User not found', 404);
+  }
+
+  let workout = await Workout.findOne({ focus: user.fitnessGoal }).lean();
+  let reason = `Matches your fitness goal: ${user.fitnessGoal}.`;
+
+  if (!workout) {
+    const recentActivity = await Activity.findOne({ user: user._id }).sort({ occurredAt: -1 }).lean();
+    if (recentActivity) {
+      workout = await Workout.findOne({ focus: recentActivity.type }).lean();
+      reason = `Based on your recent ${recentActivity.type} activity.`;
+    }
+  }
+
+  if (!workout) {
+    workout = await Workout.findOne().lean();
+    reason = 'General workout suggestion for your current program.';
+  }
+  if (!workout) {
+    return [];
+  }
+
+  return [{ ...workout, reason }];
 }
 
 export { User };
